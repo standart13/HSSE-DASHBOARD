@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HORSE HSSE Dashboard - Bursa</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #f0f0f0;
+  }
+
+  .dashboard {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+  }
+
+  .header {
+    height: 8vh;
+    min-height: 60px;
+    background: linear-gradient(135deg, #0a0e1a 0%, #1a2540 50%, #0a0e1a 100%);
+    background-image:
+      radial-gradient(circle at 30% 50%, rgba(40,80,140,0.4) 0%, transparent 50%),
+      radial-gradient(circle at 70% 50%, rgba(30,60,120,0.3) 0%, transparent 50%),
+      linear-gradient(135deg, #0a0e1a 0%, #1a2540 50%, #0a0e1a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    color: white;
+    border-bottom: 2px solid #000;
+  }
+
+  .header-logo {
+    height: 60%;
+    max-height: 45px;
+    filter: invert(1) brightness(2);
+  }
+
+  .header-title {
+    font-size: clamp(20px, 2.5vw, 36px);
+    font-weight: 700;
+    letter-spacing: 4px;
+  }
+
+  .header-location {
+    font-size: clamp(16px, 1.8vw, 26px);
+    font-weight: 600;
+  }
+
+  .connection-status { display: none !important; }
+  }
+  .connection-status.connected { background: rgba(76,175,80,0.85); }
+  .connection-status.error { background: rgba(229,57,53,0.85); }
+
+  /* ===== MAIN LAYOUT =====
+     Columns:
+       1: SIFIR KAZA/HATA + dept labels  (110px)
+       2: F0
+       3: F1
+       4: F2
+       5: GAP (small)
+       6: Days
+       7: GAP (medium - between days and FR2/LTCR)
+       8: FR2 Target
+       9: FR2 MTD
+      10: GAP (between FR2 and LTCR)
+      11: LTCR Target
+      12: LTCR MTD
+  */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns:
+      110px            /* col 1 */
+      1fr 1fr 1fr      /* col 2-4: FR0,FR1,FR2 */
+      18px             /* col 5: gap */
+      1.2fr            /* col 6: Days */
+      30px             /* col 7: gap before FR2 */
+      0.9fr 0.9fr      /* col 8-9: FR2 */
+      18px             /* col 10: gap between FR2 and LTCR */
+      0.9fr 0.9fr;     /* col 11-12: LTCR */
+    grid-template-rows:
+      minmax(28px, 4%)   /* row 1: top headers */
+      minmax(32px, 5%)   /* row 2: sub-headers */
+      repeat(6, 1fr);    /* row 3-8: 6 dept rows, eşit dağılım */
+    gap: 6px;
+    padding: 12px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  /* İŞ GÜVENLİĞİ SENİNLE BAŞLAR slogan block */
+  .slogan-block {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+    background: #000000;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .slogan-block img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Top-level headers (row 1) */
+  .top-header {
+    background: linear-gradient(180deg, #1e3a8a, #1e40af);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(11px, 1.05vw, 15px);
+    border-radius: 4px;
+    text-align: center;
+    padding: 2px;
+  }
+
+  .accidents-top { grid-column: 2 / 5; grid-row: 1 / 2; }
+  .days-top      { grid-column: 6 / 7; grid-row: 1 / 3; line-height: 1.15; flex-direction: column; }
+  .fr2-top       { grid-column: 8 / 10; grid-row: 1 / 2; }
+  .ltcr-top      { grid-column: 11 / 13; grid-row: 1 / 2; }
+
+  /* Sub-headers (row 2) - F0/F1/F2 and Target/MTD */
+  .sub-header {
+    background: linear-gradient(180deg, #2563eb, #1e40af);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: clamp(10px, 0.85vw, 13px);
+    border-radius: 4px;
+    padding: 2px;
+  }
+
+  .sub-f0 { grid-column: 2 / 3; grid-row: 2 / 3; }
+  .sub-f1 { grid-column: 3 / 4; grid-row: 2 / 3; }
+  .sub-f2 { grid-column: 4 / 5; grid-row: 2 / 3; }
+  .sub-fr2-target  { grid-column: 8 / 9;  grid-row: 2 / 3; }
+  .sub-fr2-mtd     { grid-column: 9 / 10; grid-row: 2 / 3; }
+  .sub-ltcr-target { grid-column: 11 / 12; grid-row: 2 / 3; }
+  .sub-ltcr-mtd    { grid-column: 12 / 13; grid-row: 2 / 3; }
+
+  /* Department labels */
+  .dept-label {
+    background: linear-gradient(180deg, #1e40af, #1e3a8a);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: clamp(11px, 1vw, 15px);
+    border-radius: 4px;
+    padding: 4px;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  /* Data cells */
+  .data-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(18px, 2.4vw, 36px);
+    color: #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+  }
+  .data-cell:hover { transform: scale(0.98); }
+  .data-cell.zero { background: #4CAF50; color: #000; }
+  .data-cell.nonzero { background: #E53935; color: white; }
+
+  .days-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(18px, 2.4vw, 34px);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s;
+  }
+  .days-cell:hover { transform: scale(0.98); }
+  .days-cell.good { background: #4CAF50; color: #000; }
+  .days-cell.bad  { background: #E53935; color: white; }
+
+  /* Metric cells (FR2 / LTCR) - only in PLANT row */
+  .metric-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(14px, 1.7vw, 26px);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s;
+  }
+  .metric-cell:hover { transform: scale(0.98); }
+  .metric-cell.target { background: #BDBDBD; color: #000; }
+  .metric-cell.actual-good { background: #4CAF50; color: #000; }
+  .metric-cell.actual-bad { background: #E53935; color: white; }
+
+  /* Bulletin */
+  .bulletin {
+    background: #fafafa;
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .bulletin.has-image {
+    border: none;
+    background: transparent;
+  }
+  .bulletin.dragover {
+    border-color: #2196F3;
+    background: #e3f2fd;
+  }
+  .bulletin img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .bulletin-placeholder {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+  }
+  .bulletin-placeholder .icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+  }
+  .bulletin-placeholder .title {
+    font-size: clamp(14px, 1.2vw, 18px);
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #555;
+  }
+  .bulletin-placeholder .desc {
+    font-size: clamp(10px, 0.85vw, 13px);
+    line-height: 1.4;
+  }
+  .bulletin-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+  }
+  .bulletin:hover .bulletin-controls { opacity: 1; }
+  .bulletin-btn {
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .bulletin-btn:hover { background: rgba(0,0,0,0.9); }
+  .bulletin-btn.remove { background: rgba(220,53,69,0.9); }
+
+  .upload-status {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    display: none;
+    z-index: 5;
+  }
+  .upload-status.show { display: block; }
+
+  #file-input { display: none; }
+
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.show { display: flex; }
+  .modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    min-width: 300px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .modal-content h3 {
+    margin-bottom: 14px;
+    font-size: 16px;
+  }
+  .modal-content input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .modal-buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-save { background: #2196F3; color: white; }
+  .btn-cancel { background: #ddd; color: #333; }
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="header">
+    <div style="display:flex; align-items:center; gap:15px;">
+      <img id="horse-logo" class="header-logo" src="horse-logo.png" alt="HORSE" />
+    </div>
+    <div class="header-title">HSSE</div>
+    <div class="header-location">Bursa</div>
+  </div>
+
+  <div class="main" id="main-grid">
+    <!-- İŞ GÜVENLİĞİ SENİNLE BAŞLAR -->
+    <div class="slogan-block">
+      <img src="is-guvenligi.png" alt="İş Güvenliği Seninle Başlar" />
+    </div>
+
+    <!-- TOP HEADERS (row 1) -->
+    <div class="top-header accidents-top">Accidents (YTD)</div>
+    <div class="top-header days-top">
+      <div>Days</div>
+      <div style="font-size:0.88em;">Since Last</div>
+      <div style="font-size:0.88em;">FR2 Accident</div>
+    </div>
+    <div class="top-header fr2-top">FR2</div>
+    <div class="top-header ltcr-top">LTCR</div>
+
+    <!-- SUB HEADERS (row 2) -->
+    <div class="sub-header sub-f0">FR0</div>
+    <div class="sub-header sub-f1">FR1</div>
+    <div class="sub-header sub-f2">FR2</div>
+    <div class="sub-header sub-fr2-target">Target</div>
+    <div class="sub-header sub-fr2-mtd">MTD</div>
+    <div class="sub-header sub-ltcr-target">Target</div>
+    <div class="sub-header sub-ltcr-mtd">MTD</div>
+  </div>
+</div>
+
+<div class="modal" id="edit-modal">
+  <div class="modal-content">
+    <h3 id="modal-title">Değer Düzenle</h3>
+    <input type="text" id="modal-input" />
+    <div class="modal-buttons">
+      <button class="btn-cancel" onclick="closeModal()">İptal</button>
+      <button class="btn-save" onclick="saveModal()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="image/*" />
+
+<div class="connection-status" id="conn-status">Bağlanıyor...</div>
+
+<!-- FIREBASE MODULE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBLeZYzpRMknOhr6NkKS4k7MzVXrLdcOQc",
+    authDomain: "horse-iskaza.firebaseapp.com",
+    databaseURL: "https://horse-iskaza-default-rtdb.firebaseio.com",
+    projectId: "horse-iskaza",
+    storageBucket: "horse-iskaza.firebasestorage.app",
+    messagingSenderId: "82807394350",
+    appId: "1:82807394350:web:923b97e89096fb19c48fbf"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.firebase = { db, ref, set, onValue };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<script>
+  // PLANT en üstte, fabrika geneli. Sıra: PLANT, MOTOR, VİTES KUTUSU, DÖKÜMHANE, BAKIM, LOJİSTİK
+  const departments = ['PLANT', 'MOTOR', 'VİTES KUTUSU', 'DÖKÜMHANE', 'BAKIM', 'LOJİSTİK'];
+
+  const defaultData = {
+    accidents: {
+      'PLANT':        { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+      'MOTOR':        { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+      'VİTES KUTUSU': { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+      'DÖKÜMHANE':    { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+      'BAKIM':        { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+      'LOJİSTİK':     { F0: 0, F1: 0, F2: 0, lastFR2Date: null },
+    },
+    metrics: {
+      fr2:  { target: '0,97', actual: '0,00' },
+      ltcr: { target: '0,53', actual: '0,00' }
+    },
+    bulletinImage: null,
+    bulletinImageAspect: null
+  };
+
+  // Tarihten bu yana geçen günleri hesapla
+  function daysSince(dateStr) {
+    if (!dateStr) return 0;
+    const start = new Date(dateStr);
+    const today = new Date();
+    // Saat farklarını sıfırla, sadece tarih farkını al
+    start.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  }
+
+  // PLANT için: PLANT dışındaki departmanların en güncel (en yakın) FR2 tarihini bul
+  function getLatestFR2Date() {
+    let latest = null;
+    departments.forEach(d => {
+      if (d === 'PLANT') return;
+      const dt = currentData.accidents[d]?.lastFR2Date;
+      if (!dt) return;
+      if (!latest || new Date(dt) > new Date(latest)) {
+        latest = dt;
+      }
+    });
+    return latest;
+  }
+
+  let currentData = JSON.parse(JSON.stringify(defaultData));
+  let firebaseReady = false;
+
+  function setConnectionStatus(status, type) {
+    const el = document.getElementById('conn-status');
+    el.textContent = status;
+    el.className = 'connection-status ' + (type || '');
+  }
+
+  function initFirebase() {
+    if (!window.firebase) return;
+    firebaseReady = true;
+
+    const fb = window.firebase;
+    const dataRef = fb.ref(fb.db, 'dashboard');
+
+    fb.onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        currentData = data;
+        if (!currentData.accidents) currentData.accidents = {};
+        departments.forEach(d => {
+          if (!currentData.accidents[d]) {
+            currentData.accidents[d] = { F0: 0, F1: 0, F2: 0, lastFR2Date: null };
+          }
+          // Eski 'days' alanını lastFR2Date'e migrate et
+          if (currentData.accidents[d].days !== undefined && currentData.accidents[d].lastFR2Date === undefined) {
+            const days = currentData.accidents[d].days || 0;
+            const date = new Date();
+            date.setDate(date.getDate() - days);
+            currentData.accidents[d].lastFR2Date = date.toISOString().split('T')[0];
+            delete currentData.accidents[d].days;
+          }
+        });
+        if (!currentData.metrics) currentData.metrics = defaultData.metrics;
+        renderGrid();
+        setConnectionStatus('🔵 Cloud bağlı', 'connected');
+      } else {
+        fb.set(dataRef, currentData);
+        renderGrid();
+        setConnectionStatus('🔵 Cloud bağlı (yeni)', 'connected');
+      }
+    }, (error) => {
+      console.error('Firebase read error:', error);
+      setConnectionStatus('⚠ Bağlantı hatası', 'error');
+      renderGrid();
+    });
+  }
+
+  function saveData() {
+    if (!firebaseReady || !window.firebase) return;
+    const fb = window.firebase;
+    fb.set(fb.ref(fb.db, 'dashboard'), currentData)
+      .catch(err => {
+        console.error('Save error:', err);
+        setConnectionStatus('⚠ Kaydetme hatası', 'error');
+      });
+  }
+
+  window.addEventListener('firebase-ready', initFirebase);
+  if (window.firebase) initFirebase();
+
+  function renderGrid() {
+    const grid = document.getElementById('main-grid');
+    const existing = grid.querySelectorAll('.dynamic-row');
+    existing.forEach(el => el.remove());
+
+    // Departments start at grid row 3 (after top-header + sub-header rows)
+    departments.forEach((dept, idx) => {
+      const row = idx + 3;
+      const data = currentData.accidents[dept] || { F0: 0, F1: 0, F2: 0, lastFR2Date: null };
+
+      // Dept label
+      const label = document.createElement('div');
+      label.className = 'dept-label dynamic-row';
+      label.style.gridColumn = '1 / 2';
+      label.style.gridRow = `${row} / ${row + 1}`;
+      label.textContent = dept;
+      grid.appendChild(label);
+
+      // F0, F1, F2
+      ['F0', 'F1', 'F2'].forEach((f, fIdx) => {
+        const cell = document.createElement('div');
+        const val = data[f] || 0;
+        cell.className = `data-cell dynamic-row ${val === 0 ? 'zero' : 'nonzero'}`;
+        cell.style.gridColumn = `${2 + fIdx} / ${3 + fIdx}`;
+        cell.style.gridRow = `${row} / ${row + 1}`;
+        cell.textContent = val;
+        cell.onclick = () => editAccident(dept, f);
+        grid.appendChild(cell);
+      });
+
+      // PLANT için: diğer departmanların en son FR2 tarihini otomatik bul
+      // Diğer departmanlar için: kendi lastFR2Date'ini kullan
+      let effectiveDate;
+      if (dept === 'PLANT') {
+        effectiveDate = getLatestFR2Date();
+      } else {
+        effectiveDate = data.lastFR2Date;
+      }
+      const days = daysSince(effectiveDate);
+
+      const daysCell = document.createElement('div');
+      daysCell.className = `days-cell dynamic-row ${(data.F2 || 0) === 0 ? 'good' : 'bad'}`;
+      daysCell.style.gridColumn = '6 / 7';
+      daysCell.style.gridRow = `${row} / ${row + 1}`;
+      daysCell.textContent = days;
+      if (dept === 'PLANT') {
+        // PLANT tıklanamaz - otomatik hesaplanıyor
+        daysCell.style.cursor = 'not-allowed';
+        daysCell.title = 'Diğer departmanların en güncel FR2 tarihinden otomatik hesaplanır';
+      } else {
+        daysCell.onclick = () => editDays(dept);
+      }
+      grid.appendChild(daysCell);
+    });
+
+    // FR2 / LTCR metric cells - only in PLANT row (grid row 3)
+    const fr2Target = document.createElement('div');
+    fr2Target.className = 'metric-cell target dynamic-row';
+    fr2Target.style.gridColumn = '8 / 9';
+    fr2Target.style.gridRow = '3 / 4';
+    fr2Target.textContent = currentData.metrics.fr2.target;
+    fr2Target.onclick = () => editMetric('fr2', 'target');
+    grid.appendChild(fr2Target);
+
+    const fr2Mtd = document.createElement('div');
+    fr2Mtd.className = 'metric-cell actual-good dynamic-row';
+    fr2Mtd.style.gridColumn = '9 / 10';
+    fr2Mtd.style.gridRow = '3 / 4';
+    fr2Mtd.textContent = currentData.metrics.fr2.actual;
+    fr2Mtd.onclick = () => editMetric('fr2', 'actual');
+    grid.appendChild(fr2Mtd);
+
+    const ltcrTarget = document.createElement('div');
+    ltcrTarget.className = 'metric-cell target dynamic-row';
+    ltcrTarget.style.gridColumn = '11 / 12';
+    ltcrTarget.style.gridRow = '3 / 4';
+    ltcrTarget.textContent = currentData.metrics.ltcr.target;
+    ltcrTarget.onclick = () => editMetric('ltcr', 'target');
+    grid.appendChild(ltcrTarget);
+
+    const ltcrMtd = document.createElement('div');
+    ltcrMtd.className = 'metric-cell actual-good dynamic-row';
+    ltcrMtd.style.gridColumn = '12 / 13';
+    ltcrMtd.style.gridRow = '3 / 4';
+    ltcrMtd.textContent = currentData.metrics.ltcr.actual;
+    ltcrMtd.onclick = () => editMetric('ltcr', 'actual');
+    grid.appendChild(ltcrMtd);
+
+    // Bulletin - PLANT satırının altından (row 4) tüm 6 dept satırının sonuna (row 9) kadar
+    const bulletin = document.createElement('div');
+    const hasImage = !!currentData.bulletinImage;
+    bulletin.className = 'bulletin dynamic-row' + (hasImage ? ' has-image' : '');
+    bulletin.id = 'bulletin-area';
+    bulletin.style.gridColumn = '8 / 13'; // FR2 start to LTCR end
+    bulletin.style.gridRow = '4 / 9';     // PLANT'in altından son departman satırının sonuna
+
+    bulletin.innerHTML = `
+      <div class="bulletin-controls">
+        <button class="bulletin-btn" onclick="event.stopPropagation(); document.getElementById('file-input').click();">📁 Yükle</button>
+        <button class="bulletin-btn remove" onclick="event.stopPropagation(); removeBulletinImage();">✕ Kaldır</button>
+      </div>
+      <div class="upload-status" id="upload-status"></div>
+      ${hasImage
+        ? `<img src="${currentData.bulletinImage}" alt="Sağlık Bülteni" />`
+        : `<div class="bulletin-placeholder">
+            <div class="icon">📋</div>
+            <div class="title">SAĞLIK BÜLTENİ</div>
+            <div class="desc">
+              Görseli buraya sürükleyin<br>
+              veya yapıştırın (Ctrl+V)<br>
+              ya da yüklemek için tıklayın
+            </div>
+          </div>`
+      }
+    `;
+    bulletin.onclick = () => {
+      if (!currentData.bulletinImage) {
+        document.getElementById('file-input').click();
+      }
+    };
+    grid.appendChild(bulletin);
+
+    setupBulletinHandlers();
+  }
+
+  let modalContext = null;
+
+  window.editAccident = function(dept, type) {
+    modalContext = { kind: 'accident', dept, type };
+    const displayType = 'FR' + type.replace('F', '');
+    document.getElementById('modal-title').textContent = `${dept} - ${displayType} kaza sayısı`;
+    document.getElementById('modal-input').value = currentData.accidents[dept][type];
+    document.getElementById('modal-input').type = 'number';
+    showModal();
+  };
+
+  window.editDays = function(dept) {
+    modalContext = { kind: 'days', dept };
+    document.getElementById('modal-title').textContent = `${dept} - Son FR2 kazası tarihi`;
+    const current = currentData.accidents[dept].lastFR2Date;
+    // Tarih yoksa bugünü göster
+    document.getElementById('modal-input').value = current || new Date().toISOString().split('T')[0];
+    document.getElementById('modal-input').type = 'date';
+    showModal();
+  };
+
+  window.editMetric = function(metric, field) {
+    modalContext = { kind: 'metric', metric, field };
+    const labelMap = { fr2: 'FR2', ltcr: 'LTCR' };
+    const fieldMap = { target: 'Target', actual: 'MTD (Mevcut)' };
+    document.getElementById('modal-title').textContent = `${labelMap[metric]} - ${fieldMap[field]}`;
+    document.getElementById('modal-input').value = currentData.metrics[metric][field];
+    document.getElementById('modal-input').type = 'text';
+    showModal();
+  };
+
+  function showModal() {
+    document.getElementById('edit-modal').classList.add('show');
+    setTimeout(() => document.getElementById('modal-input').focus(), 50);
+  }
+
+  window.closeModal = function() {
+    document.getElementById('edit-modal').classList.remove('show');
+    modalContext = null;
+  };
+
+  window.saveModal = function() {
+    if (!modalContext) return;
+    const val = document.getElementById('modal-input').value;
+
+    if (modalContext.kind === 'accident') {
+      currentData.accidents[modalContext.dept][modalContext.type] = parseInt(val) || 0;
+    } else if (modalContext.kind === 'days') {
+      currentData.accidents[modalContext.dept].lastFR2Date = val || null;
+    } else if (modalContext.kind === 'metric') {
+      currentData.metrics[modalContext.metric][modalContext.field] = val;
+    }
+
+    saveData();
+    renderGrid();
+    closeModal();
+  };
+
+  document.getElementById('modal-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveModal();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  function setupBulletinHandlers() {
+    const bulletin = document.getElementById('bulletin-area');
+    if (!bulletin) return;
+
+    bulletin.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      bulletin.classList.add('dragover');
+    });
+    bulletin.addEventListener('dragleave', () => {
+      bulletin.classList.remove('dragover');
+    });
+    bulletin.addEventListener('drop', (e) => {
+      e.preventDefault();
+      bulletin.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        processImageFile(file);
+      }
+    });
+  }
+
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      processImageFile(file);
+    }
+    e.target.value = '';
+  });
+
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          processImageFile(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  });
+
+  async function processImageFile(file) {
+    showUploadStatus('Yükleniyor...');
+
+    if (!firebaseReady || !window.firebase) {
+      showUploadStatus('Cloud bağlantısı yok', 2000);
+      return;
+    }
+
+    try {
+      const result = await compressImage(file, 1600, 0.85);
+      currentData.bulletinImage = result.dataUrl;
+      currentData.bulletinImageAspect = result.aspect;
+      saveData();
+      renderGrid();
+      showUploadStatus('Yüklendi ✓', 1500);
+    } catch(err) {
+      console.error('Upload error:', err);
+      showUploadStatus('Hata: ' + err.message, 3000);
+    }
+  }
+
+  function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          const originalAspect = w / h;
+          if (w > maxWidth) {
+            h = (h * maxWidth) / w;
+            w = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          let q = quality;
+          let dataUrl = canvas.toDataURL('image/jpeg', q);
+          while (dataUrl.length > 700 * 1024 && q > 0.3) {
+            q -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', q);
+          }
+          resolve({ dataUrl, aspect: originalAspect });
+        };
+        img.onerror = () => reject(new Error('Görsel okunamadı'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Dosya okunamadı'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  window.removeBulletinImage = async function() {
+    if (!confirm('Bülten görselini kaldırmak istediğinize emin misiniz?')) return;
+    currentData.bulletinImage = null;
+    currentData.bulletinImageAspect = null;
+    saveData();
+    renderGrid();
+  };
+
+  function showUploadStatus(msg, hideAfter) {
+    const status = document.getElementById('upload-status');
+    if (!status) return;
+    status.textContent = msg;
+    status.classList.add('show');
+    if (hideAfter) {
+      setTimeout(() => status.classList.remove('show'), hideAfter);
+    }
+  }
+
+  document.getElementById('horse-logo').onerror = function() {
+    this.style.display = 'none';
+    this.parentElement.innerHTML = '<div style="font-size:clamp(18px,2vw,28px); font-weight:900; letter-spacing:6px; color:white;">HORSE</div>';
+  };
+
+  renderGrid();
+  setConnectionStatus('Bağlanıyor...');
+
+  // Sayfa açık kaldığında günler otomatik güncellensin
+  // Her dakika kontrol et - gün değiştiyse yeniden çiz
+  let lastRenderedDay = new Date().toDateString();
+  setInterval(() => {
+    const currentDay = new Date().toDateString();
+    if (currentDay !== lastRenderedDay) {
+      lastRenderedDay = currentDay;
+      renderGrid();
+    }
+  }, 60 * 1000);
+
+  document.getElementById('edit-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'edit-modal') closeModal();
+  });
+</script>
+
+</body>
+</html>
