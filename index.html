@@ -646,42 +646,57 @@
     ltcrMtd.onclick = () => editMetric('ltcr', 'actual');
     grid.appendChild(ltcrMtd);
 
-    // Bulletin - PLANT satırının altından (row 4) tüm 6 dept satırının sonuna (row 9) kadar
+    // İki ayrı bülten alanı - alt alta
+    // Bülten 1: row 4-6 (PLANT altından ortaya)
+    // Bülten 2: row 7-9 (ortadan altına)
+    createBulletin(grid, 1, '4 / 7');
+    createBulletin(grid, 2, '7 / 9');
+
+    setupBulletinHandlers();
+  }
+
+  function createBulletin(grid, slot, rowSpan) {
+    const key = 'bulletinImage' + (slot === 1 ? '' : slot); // slot 1: bulletinImage (geriye uyumluluk), slot 2: bulletinImage2
+    const aspectKey = 'bulletinImageAspect' + (slot === 1 ? '' : slot);
+    const imageValue = currentData[key];
+
     const bulletin = document.createElement('div');
-    const hasImage = !!currentData.bulletinImage;
+    const hasImage = !!imageValue;
     bulletin.className = 'bulletin dynamic-row' + (hasImage ? ' has-image' : '');
-    bulletin.id = 'bulletin-area';
-    bulletin.style.gridColumn = '8 / 16'; // FR1 start to LTCR end
-    bulletin.style.gridRow = '4 / 9';     // PLANT'in altından son departman satırının sonuna
+    bulletin.id = 'bulletin-area-' + slot;
+    bulletin.dataset.slot = slot;
+    bulletin.style.gridColumn = '8 / 16';
+    bulletin.style.gridRow = rowSpan;
 
     bulletin.innerHTML = `
       <div class="bulletin-controls">
-        <button class="bulletin-btn" onclick="event.stopPropagation(); document.getElementById('file-input').click();">📁 Yükle</button>
-        <button class="bulletin-btn remove" onclick="event.stopPropagation(); removeBulletinImage();">✕ Kaldır</button>
+        <button class="bulletin-btn" onclick="event.stopPropagation(); triggerFileInput(${slot});">📁 Yükle</button>
+        <button class="bulletin-btn remove" onclick="event.stopPropagation(); removeBulletinImage(${slot});">✕ Kaldır</button>
       </div>
-      <div class="upload-status" id="upload-status"></div>
+      <div class="upload-status" id="upload-status-${slot}"></div>
       ${hasImage
-        ? `<img src="${currentData.bulletinImage}" alt="Sağlık Bülteni" />`
+        ? `<img src="${imageValue}" alt="Bülten ${slot}" />`
         : `<div class="bulletin-placeholder">
             <div class="icon">📋</div>
-            <div class="title">SAĞLIK BÜLTENİ</div>
+            <div class="title">GÖRSEL ${slot}</div>
             <div class="desc">
               Görseli buraya sürükleyin<br>
-              veya yapıştırın (Ctrl+V)<br>
-              ya da yüklemek için tıklayın
+              veya tıklayın
             </div>
           </div>`
       }
     `;
     bulletin.onclick = () => {
-      if (!currentData.bulletinImage) {
-        document.getElementById('file-input').click();
-      }
+      if (!imageValue) triggerFileInput(slot);
     };
     grid.appendChild(bulletin);
-
-    setupBulletinHandlers();
   }
+
+  window.triggerFileInput = function(slot) {
+    const input = document.getElementById('file-input');
+    input.dataset.slot = slot;
+    input.click();
+  };
 
   let modalContext = null;
 
@@ -747,32 +762,43 @@
   });
 
   function setupBulletinHandlers() {
-    const bulletin = document.getElementById('bulletin-area');
-    if (!bulletin) return;
+    [1, 2].forEach(slot => {
+      const bulletin = document.getElementById('bulletin-area-' + slot);
+      if (!bulletin) return;
 
-    bulletin.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      bulletin.classList.add('dragover');
-    });
-    bulletin.addEventListener('dragleave', () => {
-      bulletin.classList.remove('dragover');
-    });
-    bulletin.addEventListener('drop', (e) => {
-      e.preventDefault();
-      bulletin.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        processImageFile(file);
-      }
+      bulletin.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        bulletin.classList.add('dragover');
+      });
+      bulletin.addEventListener('dragleave', () => {
+        bulletin.classList.remove('dragover');
+      });
+      bulletin.addEventListener('drop', (e) => {
+        e.preventDefault();
+        bulletin.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          processImageFile(file, slot);
+        }
+      });
     });
   }
 
   document.getElementById('file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
+    const slot = parseInt(e.target.dataset.slot || '1');
     if (file && file.type.startsWith('image/')) {
-      processImageFile(file);
+      processImageFile(file, slot);
     }
     e.target.value = '';
+  });
+
+  // Paste: en son hover edilen (veya focus alan) bültene yapıştırır
+  // Fare hangi bültenin üzerindeyse oraya
+  let lastHoveredSlot = 1;
+  document.addEventListener('mouseover', (e) => {
+    const b = e.target.closest('[id^="bulletin-area-"]');
+    if (b) lastHoveredSlot = parseInt(b.dataset.slot);
   });
 
   document.addEventListener('paste', (e) => {
@@ -782,7 +808,7 @@
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
-          processImageFile(file);
+          processImageFile(file, lastHoveredSlot);
           e.preventDefault();
           break;
         }
@@ -790,24 +816,26 @@
     }
   });
 
-  async function processImageFile(file) {
-    showUploadStatus('Yükleniyor...');
+  async function processImageFile(file, slot) {
+    const key = 'bulletinImage' + (slot === 1 ? '' : slot);
+    const aspectKey = 'bulletinImageAspect' + (slot === 1 ? '' : slot);
+    showUploadStatus('Yükleniyor...', slot);
 
     if (!firebaseReady || !window.firebase) {
-      showUploadStatus('Cloud bağlantısı yok', 2000);
+      showUploadStatus('Cloud bağlantısı yok', slot, 2000);
       return;
     }
 
     try {
       const result = await compressImage(file, 1600, 0.85);
-      currentData.bulletinImage = result.dataUrl;
-      currentData.bulletinImageAspect = result.aspect;
+      currentData[key] = result.dataUrl;
+      currentData[aspectKey] = result.aspect;
       saveData();
       renderGrid();
-      showUploadStatus('Yüklendi ✓', 1500);
+      showUploadStatus('Yüklendi ✓', slot, 1500);
     } catch(err) {
       console.error('Upload error:', err);
-      showUploadStatus('Hata: ' + err.message, 3000);
+      showUploadStatus('Hata: ' + err.message, slot, 3000);
     }
   }
 
@@ -846,16 +874,18 @@
     });
   }
 
-  window.removeBulletinImage = async function() {
-    if (!confirm('Bülten görselini kaldırmak istediğinize emin misiniz?')) return;
-    currentData.bulletinImage = null;
-    currentData.bulletinImageAspect = null;
+  window.removeBulletinImage = async function(slot) {
+    if (!confirm('Bu görseli kaldırmak istediğinize emin misiniz?')) return;
+    const key = 'bulletinImage' + (slot === 1 ? '' : slot);
+    const aspectKey = 'bulletinImageAspect' + (slot === 1 ? '' : slot);
+    currentData[key] = null;
+    currentData[aspectKey] = null;
     saveData();
     renderGrid();
   };
 
-  function showUploadStatus(msg, hideAfter) {
-    const status = document.getElementById('upload-status');
+  function showUploadStatus(msg, slot, hideAfter) {
+    const status = document.getElementById('upload-status-' + slot);
     if (!status) return;
     status.textContent = msg;
     status.classList.add('show');
