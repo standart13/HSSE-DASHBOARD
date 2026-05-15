@@ -220,18 +220,6 @@
   .metric-cell.actual-good { background: #4CAF50; color: #000; }
   .metric-cell.actual-bad { background: #E53935; color: white; }
 
-  /* Bulletin container - iki bülteni flex ile eşit ikiye böler */
-  .bulletin-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow: hidden;
-  }
-  .bulletin-container .bulletin {
-    flex: 1 1 0;       /* her ikisi eşit yer kaplar */
-    min-height: 0;     /* flex overflow düzeltmesi */
-  }
-
   /* Bulletin */
   .bulletin {
     background: #fafafa;
@@ -658,30 +646,27 @@
     ltcrMtd.onclick = () => editMetric('ltcr', 'actual');
     grid.appendChild(ltcrMtd);
 
-    // İki bülteni tek grid hücresine koy, flex ile EŞİT ikiye böl
-    // Tek bir container row 4-9 arası, içinde 2 eşit yükseklikli bülten
-    const bulletinContainer = document.createElement('div');
-    bulletinContainer.className = 'bulletin-container dynamic-row';
-    bulletinContainer.style.gridColumn = '8 / 16';
-    bulletinContainer.style.gridRow = '4 / 9';
-
-    createBulletin(bulletinContainer, 1);
-    createBulletin(bulletinContainer, 2);
-
-    grid.appendChild(bulletinContainer);
+    // İki ayrı bülten alanı - alt alta
+    // Bülten 1: row 4-6 (PLANT altından ortaya)
+    // Bülten 2: row 7-9 (ortadan altına)
+    createBulletin(grid, 1, '4 / 7');
+    createBulletin(grid, 2, '7 / 9');
 
     setupBulletinHandlers();
   }
 
-  function createBulletin(container, slot) {
-    const key = 'bulletinImage' + (slot === 1 ? '' : slot);
+  function createBulletin(grid, slot, rowSpan) {
+    const key = 'bulletinImage' + (slot === 1 ? '' : slot); // slot 1: bulletinImage (geriye uyumluluk), slot 2: bulletinImage2
+    const aspectKey = 'bulletinImageAspect' + (slot === 1 ? '' : slot);
     const imageValue = currentData[key];
 
     const bulletin = document.createElement('div');
     const hasImage = !!imageValue;
-    bulletin.className = 'bulletin' + (hasImage ? ' has-image' : '');
+    bulletin.className = 'bulletin dynamic-row' + (hasImage ? ' has-image' : '');
     bulletin.id = 'bulletin-area-' + slot;
     bulletin.dataset.slot = slot;
+    bulletin.style.gridColumn = '8 / 16';
+    bulletin.style.gridRow = rowSpan;
 
     bulletin.innerHTML = `
       <div class="bulletin-controls">
@@ -704,7 +689,7 @@
     bulletin.onclick = () => {
       if (!imageValue) triggerFileInput(slot);
     };
-    container.appendChild(bulletin);
+    grid.appendChild(bulletin);
   }
 
   window.triggerFileInput = function(slot) {
