@@ -59,33 +59,20 @@
 
   .connection-status { display: none !important; }
 
-  /* ===== MAIN LAYOUT =====
-     Columns:
-       1: Slogan + dept labels (110px)
-       2-4: FR0, FR1, FR2 accidents
-       5: GAP
-       6: Days
-       7: GAP
-       8-9: FR1 Target + MTD
-       10: GAP
-       11-12: FR2 Target + MTD
-       13: GAP
-       14-15: LTCR Target + MTD
-  */
   .main {
     flex: 1;
     display: grid;
     grid-template-columns:
-      110px            /* col 1 */
-      1fr 1fr 1fr      /* col 2-4: FR0,FR1,FR2 */
-      18px             /* col 5: gap */
-      1.1fr            /* col 6: Days */
-      22px             /* col 7: gap */
-      0.75fr 0.75fr    /* col 8-9: FR1 (YENİ) */
-      14px             /* col 10: gap */
-      0.75fr 0.75fr    /* col 11-12: FR2 */
-      14px             /* col 13: gap */
-      0.75fr 0.75fr;   /* col 14-15: LTCR */
+      110px
+      1fr 1fr 1fr
+      18px
+      1.1fr
+      22px
+      0.75fr 0.75fr
+      14px
+      0.75fr 0.75fr
+      14px
+      0.75fr 0.75fr;
     grid-template-rows:
       minmax(28px, 4%)
       minmax(32px, 5%)
@@ -96,7 +83,6 @@
     overflow: hidden;
   }
 
-  /* İŞ GÜVENLİĞİ SENİNLE BAŞLAR slogan block */
   .slogan-block {
     grid-column: 1 / 2;
     grid-row: 1 / 3;
@@ -115,7 +101,6 @@
     display: block;
   }
 
-  /* Top-level headers (row 1) */
   .top-header {
     background: linear-gradient(180deg, #1e3a8a, #1e40af);
     color: white;
@@ -135,7 +120,6 @@
   .fr2-top       { grid-column: 11 / 13; grid-row: 1 / 2; }
   .ltcr-top      { grid-column: 14 / 16; grid-row: 1 / 2; }
 
-  /* Sub-headers (row 2) */
   .sub-header {
     background: linear-gradient(180deg, #2563eb, #1e40af);
     color: white;
@@ -158,7 +142,6 @@
   .sub-ltcr-target { grid-column: 14 / 15; grid-row: 2 / 3; }
   .sub-ltcr-mtd    { grid-column: 15 / 16; grid-row: 2 / 3; }
 
-  /* Department labels */
   .dept-label {
     background: linear-gradient(180deg, #1e40af, #1e3a8a);
     color: white;
@@ -173,7 +156,6 @@
     line-height: 1.1;
   }
 
-  /* Data cells */
   .data-cell {
     display: flex;
     align-items: center;
@@ -205,7 +187,6 @@
   .days-cell.good { background: #4CAF50; color: #000; }
   .days-cell.bad  { background: #E53935; color: white; }
 
-  /* Metric cells (FR2 / LTCR) - only in PLANT row */
   .metric-cell {
     display: flex;
     align-items: center;
@@ -222,7 +203,15 @@
   .metric-cell.actual-good { background: #4CAF50; color: #000; }
   .metric-cell.actual-bad { background: #E53935; color: white; }
 
-  /* Bulletin */
+  .bulletin-wrapper {
+    grid-column: 8 / 16;
+    grid-row: 4 / 9;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+  }
+
   .bulletin {
     background: #fafafa;
     border: 2px dashed #ccc;
@@ -234,6 +223,7 @@
     overflow: hidden;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
+    width: 100%;
   }
   .bulletin.has-image {
     border: none;
@@ -306,6 +296,28 @@
   }
   .upload-status.show { display: block; }
 
+  .resizer {
+    height: 12px;
+    background: #ddd;
+    cursor: ns-resize;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin: 4px 0;
+    transition: background 0.2s;
+  }
+  .resizer:hover, .resizer:active {
+    background: #2196F3;
+  }
+  .resizer::after {
+    content: '≡';
+    color: #666;
+    font-size: 16px;
+    line-height: 1;
+  }
+
   #file-input { display: none; }
 
   .modal {
@@ -365,12 +377,10 @@
   </div>
 
   <div class="main" id="main-grid">
-    <!-- İŞ GÜVENLİĞİ SENİNLE BAŞLAR -->
     <div class="slogan-block">
       <img src="is-guvenligi.png" alt="İş Güvenliği Seninle Başlar" />
     </div>
 
-    <!-- TOP HEADERS (row 1) -->
     <div class="top-header accidents-top">Accidents (YTD)</div>
     <div class="top-header days-top">
       <div>Days</div>
@@ -381,7 +391,6 @@
     <div class="top-header fr2-top">FR2</div>
     <div class="top-header ltcr-top">LTCR</div>
 
-    <!-- SUB HEADERS (row 2) -->
     <div class="sub-header sub-f0">FR0</div>
     <div class="sub-header sub-f1">FR1</div>
     <div class="sub-header sub-f2">FR2</div>
@@ -406,10 +415,8 @@
 </div>
 
 <input type="file" id="file-input" accept="image/*" />
-
 <div class="connection-status" id="conn-status">Bağlanıyor...</div>
 
-<!-- FIREBASE MODULE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
@@ -432,7 +439,6 @@
 </script>
 
 <script>
-  // PLANT en üstte, fabrika geneli. Sıra: PLANT, MOTOR, VİTES KUTUSU, DÖKÜMHANE, BAKIM, LOJİSTİK
   const departments = ['PLANT', 'MOTOR', 'VİTES KUTUSU', 'DÖKÜMHANE', 'BAKIM', 'LOJİSTİK'];
 
   const defaultData = {
@@ -450,22 +456,22 @@
       ltcr: { target: '0,53', actual: '0,00' }
     },
     bulletinImage: null,
-    bulletinImageAspect: null
+    bulletinImageAspect: null,
+    bulletinImage2: null,
+    bulletinImageAspect2: null,
+    bulletinRatio: 60
   };
 
-  // Tarihten bu yana geçen günleri hesapla
   function daysSince(dateStr) {
     if (!dateStr) return 0;
     const start = new Date(dateStr);
     const today = new Date();
-    // Saat farklarını sıfırla, sadece tarih farkını al
     start.setHours(0,0,0,0);
     today.setHours(0,0,0,0);
     const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
     return Math.max(0, diff);
   }
 
-  // PLANT için: PLANT dışındaki departmanların en güncel (en yakın) FR2 tarihini bul
   function getLatestFR2Date() {
     let latest = null;
     departments.forEach(d => {
@@ -504,7 +510,6 @@
           if (!currentData.accidents[d]) {
             currentData.accidents[d] = { F0: 0, F1: 0, F2: 0, lastFR2Date: null };
           }
-          // Eski 'days' alanını lastFR2Date'e migrate et
           if (currentData.accidents[d].days !== undefined && currentData.accidents[d].lastFR2Date === undefined) {
             const days = currentData.accidents[d].days || 0;
             const date = new Date();
@@ -515,6 +520,7 @@
         });
         if (!currentData.metrics) currentData.metrics = defaultData.metrics;
         if (!currentData.metrics.fr1) currentData.metrics.fr1 = { target: '0,00', actual: '0,00' };
+        if (!currentData.bulletinRatio) currentData.bulletinRatio = 60;
         renderGrid();
         setConnectionStatus('🔵 Cloud bağlı', 'connected');
       } else {
@@ -542,17 +548,38 @@
   window.addEventListener('firebase-ready', initFirebase);
   if (window.firebase) initFirebase();
 
+  let isResizing = false;
+  let activeWrapper = null;
+  let activeTopBulletin = null;
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing || !activeWrapper || !activeTopBulletin) return;
+    const rect = activeWrapper.getBoundingClientRect();
+    let newHeight = e.clientY - rect.top;
+    let ratio = (newHeight / rect.height) * 100;
+    if (ratio < 10) ratio = 10;
+    if (ratio > 90) ratio = 90;
+    activeTopBulletin.style.flex = `0 0 calc(${ratio}% - 6px)`;
+    currentData.bulletinRatio = ratio;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = 'default';
+      saveData();
+    }
+  });
+
   function renderGrid() {
     const grid = document.getElementById('main-grid');
     const existing = grid.querySelectorAll('.dynamic-row');
     existing.forEach(el => el.remove());
 
-    // Departments start at grid row 3 (after top-header + sub-header rows)
     departments.forEach((dept, idx) => {
       const row = idx + 3;
       const data = currentData.accidents[dept] || { F0: 0, F1: 0, F2: 0, lastFR2Date: null };
 
-      // Dept label
       const label = document.createElement('div');
       label.className = 'dept-label dynamic-row';
       label.style.gridColumn = '1 / 2';
@@ -560,7 +587,6 @@
       label.textContent = dept;
       grid.appendChild(label);
 
-      // F0, F1, F2
       ['F0', 'F1', 'F2'].forEach((f, fIdx) => {
         const cell = document.createElement('div');
         const val = data[f] || 0;
@@ -572,8 +598,6 @@
         grid.appendChild(cell);
       });
 
-      // PLANT için: diğer departmanların en son FR2 tarihini otomatik bul
-      // Diğer departmanlar için: kendi lastFR2Date'ini kullan
       let effectiveDate;
       if (dept === 'PLANT') {
         effectiveDate = getLatestFR2Date();
@@ -588,16 +612,13 @@
       daysCell.style.gridRow = `${row} / ${row + 1}`;
       daysCell.textContent = days;
       if (dept === 'PLANT') {
-        // PLANT tıklanamaz - otomatik hesaplanıyor
         daysCell.style.cursor = 'not-allowed';
-        daysCell.title = 'Diğer departmanların en güncel FR2 tarihinden otomatik hesaplanır';
       } else {
         daysCell.onclick = () => editDays(dept);
       }
       grid.appendChild(daysCell);
     });
 
-    // FR1 metric cells (PLANT row, cols 8-9)
     const fr1Target = document.createElement('div');
     fr1Target.className = 'metric-cell target dynamic-row';
     fr1Target.style.gridColumn = '8 / 9';
@@ -614,7 +635,6 @@
     fr1Mtd.onclick = () => editMetric('fr1', 'actual');
     grid.appendChild(fr1Mtd);
 
-    // FR2 metric cells (PLANT row, cols 11-12)
     const fr2Target = document.createElement('div');
     fr2Target.className = 'metric-cell target dynamic-row';
     fr2Target.style.gridColumn = '11 / 12';
@@ -631,7 +651,6 @@
     fr2Mtd.onclick = () => editMetric('fr2', 'actual');
     grid.appendChild(fr2Mtd);
 
-    // LTCR metric cells (PLANT row, cols 14-15)
     const ltcrTarget = document.createElement('div');
     ltcrTarget.className = 'metric-cell target dynamic-row';
     ltcrTarget.style.gridColumn = '14 / 15';
@@ -648,24 +667,43 @@
     ltcrMtd.onclick = () => editMetric('ltcr', 'actual');
     grid.appendChild(ltcrMtd);
 
-    // İki bülten alt alta - üst daha büyük (3 satır), alt daha küçük (2 satır)
-    createBulletin(grid, 1, '4 / 7');  // 3 satır - büyük
-    createBulletin(grid, 2, '7 / 9');  // 2 satır - küçük
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bulletin-wrapper dynamic-row';
+
+    const b1 = createBulletinElement(1);
+    const resizer = document.createElement('div');
+    resizer.className = 'resizer';
+    const b2 = createBulletinElement(2);
+
+    const ratio = currentData.bulletinRatio || 60;
+    b1.style.flex = `0 0 calc(${ratio}% - 6px)`;
+    b2.style.flex = '1';
+
+    resizer.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      activeWrapper = wrapper;
+      activeTopBulletin = b1;
+      document.body.style.cursor = 'ns-resize';
+      e.preventDefault();
+    });
+
+    wrapper.appendChild(b1);
+    wrapper.appendChild(resizer);
+    wrapper.appendChild(b2);
+    grid.appendChild(wrapper);
 
     setupBulletinHandlers();
   }
 
-  function createBulletin(grid, slot, rowSpan) {
+  function createBulletinElement(slot) {
     const key = 'bulletinImage' + (slot === 1 ? '' : slot);
     const imageValue = currentData[key];
 
     const bulletin = document.createElement('div');
     const hasImage = !!imageValue;
-    bulletin.className = 'bulletin dynamic-row' + (hasImage ? ' has-image' : '');
+    bulletin.className = 'bulletin' + (hasImage ? ' has-image' : '');
     bulletin.id = 'bulletin-area-' + slot;
     bulletin.dataset.slot = slot;
-    bulletin.style.gridColumn = '8 / 16';
-    bulletin.style.gridRow = rowSpan;
 
     bulletin.innerHTML = `
       <div class="bulletin-controls">
@@ -678,17 +716,14 @@
         : `<div class="bulletin-placeholder">
             <div class="icon">📋</div>
             <div class="title">GÖRSEL ${slot}</div>
-            <div class="desc">
-              Görseli buraya sürükleyin<br>
-              veya tıklayın
-            </div>
+            <div class="desc">Görseli buraya sürükleyin<br>veya tıklayın</div>
           </div>`
       }
     `;
     bulletin.onclick = () => {
       if (!imageValue) triggerFileInput(slot);
     };
-    grid.appendChild(bulletin);
+    return bulletin;
   }
 
   window.triggerFileInput = function(slot) {
@@ -712,7 +747,6 @@
     modalContext = { kind: 'days', dept };
     document.getElementById('modal-title').textContent = `${dept} - Son FR2 kazası tarihi`;
     const current = currentData.accidents[dept].lastFR2Date;
-    // Tarih yoksa bugünü göster
     document.getElementById('modal-input').value = current || new Date().toISOString().split('T')[0];
     document.getElementById('modal-input').type = 'date';
     showModal();
@@ -792,8 +826,6 @@
     e.target.value = '';
   });
 
-  // Paste: en son hover edilen (veya focus alan) bültene yapıştırır
-  // Fare hangi bültenin üzerindeyse oraya
   let lastHoveredSlot = 1;
   document.addEventListener('mouseover', (e) => {
     const b = e.target.closest('[id^="bulletin-area-"]');
@@ -901,8 +933,6 @@
   renderGrid();
   setConnectionStatus('Bağlanıyor...');
 
-  // Sayfa açık kaldığında günler otomatik güncellensin
-  // Her dakika kontrol et - gün değiştiyse yeniden çiz
   let lastRenderedDay = new Date().toDateString();
   setInterval(() => {
     const currentDay = new Date().toDateString();
